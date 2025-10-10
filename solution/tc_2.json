@@ -1,0 +1,21 @@
+{
+  "meta": { "T_end": 8, "tau": 2, "capacity": 1, "w_max": 60 },
+  "initial_positions": [
+    { "bus": 1, "terminal": "CEI" }
+  ],
+  "arrivals": {
+    "CEI": { "A": 0, "C": 0 },
+    "T2":  { "D": 2 }
+  },
+  "expected_departures": [
+    { "terminal": "CEI", "bus": 1, "t": 0 },
+    { "terminal": "T2",  "bus": 1, "t": 2 },
+    { "terminal": "CEI", "bus": 1, "t": 4 }
+  ],
+  "expected_assignments": [
+    { "terminal": "CEI", "p": "A", "bus": 1, "t": 0 },
+    { "terminal": "T2",  "p": "D", "bus": 1, "t": 2 },
+    { "terminal": "CEI", "p": "C", "bus": 1, "t": 4 }
+  ],
+  "expected_objective": 16
+}

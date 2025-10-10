@@ -1,0 +1,13 @@
+{
+  "meta": { "T_end": 6, "tau": 3, "capacity": 30, "w_max": 1 },
+  "initial_positions": [
+    { "bus": 1, "terminal": "CEI" }
+  ],
+  "arrivals": {
+    "CEI": { "A": 0, "C": 0 },
+    "T2":  { "B": 0 }
+  },
+  "expected_departures": [ ],
+  "expected_assignments": [ ],
+  "infeasible": true
+}
