@@ -173,8 +173,8 @@ set_optimizer_attribute(model, "CPX_PARAM_EPGAP", 0.02)    # 2% gap
 #     end
 # end
 
-# # 7) Flow equalities of bus state (same logic as before)
-# @constraint(model, [t in T, c in B], bd[t,c] + bd_r[t,c] <= 1)
+# 7) Flow equalities of bus state (same logic as before)
+@constraint(model, [t in T, c in B], bd[t,c] + bd_r[t,c] <= 1)
 
 for c in B
     for t in T[1:end-1]   # every t < last(T)
