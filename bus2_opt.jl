@@ -111,13 +111,13 @@ end
 println("====================================")
 
 model = Model(CPLEX.Optimizer)
-set_optimizer_attribute(model, "CPX_PARAM_THREADS", 20)
+set_optimizer_attribute(model, "CPX_PARAM_THREADS", 16)
 set_optimizer_attribute(model, "CPX_PARAM_MIPEMPHASIS", 1) # feasibility
 set_optimizer_attribute(model, "CPX_PARAM_HEURFREQ", 10)
 set_optimizer_attribute(model, "CPX_PARAM_EPGAP", 0.02)    # 2% gap
 # set_optimizer_attribute(model, "CPXPARAM_MIP_Strategy_File", 3)
 # set_optimizer_attribute(model, "CPX_PARAM_NODEFILEIND", 3)
-# set_string_names_on_creation(model, false)
+set_string_names_on_creation(model, false)
 
 # Decision variables
 
@@ -131,9 +131,19 @@ set_optimizer_attribute(model, "CPX_PARAM_EPGAP", 0.02)    # 2% gap
 @variable(model, bd_r[t in T, c in B], Bin)   # depart from CRBT2 at t
 
 # Objective: minimize total waiting time (no Big-M, no Dep, no Z)
+# @objective(model, Min,
+#     sum(((t - arr[i])^2)   * x[i,c,t]   for i in P,   c in B, t in T_i[i]) +
+#     sum(((t - arr_r[i])^2) * x_r[i,c,t] for i in P_r, c in B, t in T_ir[i])
+# )
+
+# @objective(model, Min,
+#     sum((2*(t - arr[i]))   * x[i,c,t]   for i in P,   c in B, t in T_i[i]) +
+#     sum((2*(t - arr_r[i])) * x_r[i,c,t] for i in P_r, c in B, t in T_ir[i])
+# )
+
 @objective(model, Min,
-    sum(((t - arr[i])^2)   * x[i,c,t]   for i in P,   c in B, t in T_i[i]) +
-    sum(((t - arr_r[i])^2) * x_r[i,c,t] for i in P_r, c in B, t in T_ir[i])
+    sum(((t - arr[i]))   * x[i,c,t]   for i in P,   c in B, t in T_i[i]) +
+    sum(((t - arr_r[i])) * x_r[i,c,t] for i in P_r, c in B, t in T_ir[i])
 )
 
 # 1) Each passenger assigned exactly once
@@ -166,6 +176,7 @@ set_optimizer_attribute(model, "CPX_PARAM_EPGAP", 0.02)    # 2% gap
 #    fix(bd_r[t,c], 0.0; force=true)
 #end
 
+#! have to comment but if it commented the process got killed
 # for t in T, c in B
 #     if t % tau != 0
 #         fix(bd[t,c], 0.0; force=true)
@@ -192,12 +203,12 @@ for c in B
     end
 end
 
-# for c in B
-#     for t in 1:tau-1
-#         @constraint(model, ba[t,c]   == ba[t-1,c] - bd[t-1,c])
-#         @constraint(model, ba_r[t,c] == ba_r[t-1,c] - bd_r[t-1,c])
-#     end
-# end
+for c in B
+    for t in 1:tau-1
+        @constraint(model, ba[t,c]   == ba[t-1,c] - bd[t-1,c])
+        @constraint(model, ba_r[t,c] == ba_r[t-1,c] - bd_r[t-1,c])
+    end
+end
 
 
 # 8) At each terminal, buses must depart at least two minutes apart
