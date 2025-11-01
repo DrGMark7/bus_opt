@@ -6,11 +6,18 @@ from tqdm import tqdm
 
 PROJECT_PATH = "/home/hpcnc/bus_opt"
 
-case = {
-    "lambda_per_hour_cei": [75],
-    "lambda_per_hour_t2": [50],
-    "buses": [6, 7],
-    "w_max" : [80]
+# params = {
+#     "passengers_cei": [1000, 1500, 2000],
+#     "passengers_t2": [500, 1000, 1500],
+#     "buses": [6, 7],
+#     "w_max" : [80]
+# }
+
+params = {
+    "passengers_cei": [1],
+    "passengers_t2": [0.5],
+    "buses": [4],
+    "w_max" : [20]
 }
 
 def generate_permutation(params: dict) -> List[Dict[str, int]]:
@@ -19,12 +26,12 @@ def generate_permutation(params: dict) -> List[Dict[str, int]]:
     return [dict(zip(keys, combo)) for combo in all_combos]
 
 def execute_case(params: dict):
-    cei = params["lambda_per_hour_cei"]
-    t2 = params["lambda_per_hour_t2"]
+    cei = params["passengers_cei"]
+    t2 = params["passengers_t2"]
     w_max = params["w_max"]
     bus = params["buses"]
 
-    tc = f"case/tc_{cei}_{t2}_{w_max}_{bus}.json"
+    tc = f"final_case/tc_{cei}_{t2}_{w_max}_{bus}.json"
     result = f"output/tc_{cei}_{t2}_{w_max}_{bus}.json"
     log = f"{PROJECT_PATH}/log/tc_{cei}_{t2}_{w_max}_{bus}.txt"
     
@@ -34,12 +41,12 @@ def execute_case(params: dict):
 s = time.perf_counter()
 
 time_list = {}
-possible_case = generate_permutation(params=case)
+possible_case = generate_permutation(params=params)
 
 for index, case in enumerate(tqdm(possible_case)):
     
-    cei = case["lambda_per_hour_cei"]
-    t2 = case["lambda_per_hour_t2"]
+    cei = case["passengers_cei"]
+    t2 = case["passengers_t2"]
     w_max = case["w_max"]
     bus = case["buses"]
 

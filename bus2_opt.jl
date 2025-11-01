@@ -55,9 +55,10 @@ function load_config(path::AbstractString)
     P   = P_raw   === nothing ? (isempty(arr)   ? (1:0) : (minimum(keys(arr))  : maximum(keys(arr))))  : parse_range(P_raw)
     P_r = P_r_raw === nothing ? (isempty(arr_r) ? (1:0) : (minimum(keys(arr_r)) : maximum(keys(arr_r)))) : parse_range(P_r_raw)
 
-    initpos = getk("initial_positions", Any[])
+    # initpos = getk("initial_positions", Any[])
 
-    return (; T, B, P, P_r, L, tau, c_max, w_max, arr, arr_r, initpos)
+    # return (; T, B, P, P_r, L, tau, c_max, w_max, arr, arr_r, initpos)
+    return (; T, B, P, P_r, L, tau, c_max, w_max, arr, arr_r)
 end
 
 cfg_path   = length(ARGS) >= 1 ? ARGS[1] : ""
@@ -67,10 +68,11 @@ cfg = cfg_path == "" ? nothing : load_config(cfg_path)
 
 if cfg != nothing
     cfg = load_config(ARGS[1])
+    # T, B = cfg.T, cfg.B
     T, B, P, P_r = cfg.T, cfg.B, cfg.P, cfg.P_r
     L, tau, c_max, w_max = cfg.L, cfg.tau, cfg.c_max, cfg.w_max
     arr, arr_r = cfg.arr, cfg.arr_r
-    initial_positions = cfg.initpos
+    # initial_positions = cfg.initpos
 else
     #+ Default values
     T      = 0:8
@@ -83,13 +85,13 @@ else
     w_max  = 60
     arr    = Dict(1 => 0, 2 => 0)
     arr_r  = Dict(1 => 2)
-    initial_positions = Any[]
+    # initial_positions = Any[]
 end
 
 println("T=$(first(T)):$(last(T))  B=$B  P=$P  P_r=$P_r  L=$L  tau=$tau  c_max=$c_max  w_max=$w_max")
 println("Output file: $out_result")
-# println("arr(CEI) = ", arr)
-# println("arr(T2 ) = ", arr_r)
+println("arr(CEI) = ", arr)
+println("arr(T2 ) = ", arr_r)
 
 # --------- Build feasible time windows per passenger ---------
 Tmax_board = last(T) - tau
@@ -111,13 +113,13 @@ end
 println("====================================")
 
 model = Model(CPLEX.Optimizer)
-set_optimizer_attribute(model, "CPX_PARAM_THREADS", 16)
+set_optimizer_attribute(model, "CPX_PARAM_THREADS", 20)
 set_optimizer_attribute(model, "CPX_PARAM_MIPEMPHASIS", 1) # feasibility
 set_optimizer_attribute(model, "CPX_PARAM_HEURFREQ", 10)
-set_optimizer_attribute(model, "CPX_PARAM_EPGAP", 0.02)    # 2% gap
 # set_optimizer_attribute(model, "CPXPARAM_MIP_Strategy_File", 3)
 # set_optimizer_attribute(model, "CPX_PARAM_NODEFILEIND", 3)
 set_string_names_on_creation(model, false)
+set_optimizer_attribute(model, "CPXPARAM_MIP_Tolerances_MIPGap", 0.04)
 
 # Decision variables
 
@@ -131,19 +133,9 @@ set_string_names_on_creation(model, false)
 @variable(model, bd_r[t in T, c in B], Bin)   # depart from CRBT2 at t
 
 # Objective: minimize total waiting time (no Big-M, no Dep, no Z)
-# @objective(model, Min,
-#     sum(((t - arr[i])^2)   * x[i,c,t]   for i in P,   c in B, t in T_i[i]) +
-#     sum(((t - arr_r[i])^2) * x_r[i,c,t] for i in P_r, c in B, t in T_ir[i])
-# )
-
-# @objective(model, Min,
-#     sum((2*(t - arr[i]))   * x[i,c,t]   for i in P,   c in B, t in T_i[i]) +
-#     sum((2*(t - arr_r[i])) * x_r[i,c,t] for i in P_r, c in B, t in T_ir[i])
-# )
-
 @objective(model, Min,
-    sum(((t - arr[i]))   * x[i,c,t]   for i in P,   c in B, t in T_i[i]) +
-    sum(((t - arr_r[i])) * x_r[i,c,t] for i in P_r, c in B, t in T_ir[i])
+    sum(((t - arr[i])^2)   * x[i,c,t]   for i in P,   c in B, t in T_i[i]) +
+    sum(((t - arr_r[i])^2) * x_r[i,c,t] for i in P_r, c in B, t in T_ir[i])
 )
 
 # 1) Each passenger assigned exactly once
@@ -175,6 +167,18 @@ set_string_names_on_creation(model, false)
 #    fix(bd[t,c], 0.0; force=true)
 #    fix(bd_r[t,c], 0.0; force=true)
 #end
+
+#! if there are no passenger at time bus not depart
+#! new (Not test yet)
+# for t in T, c in B
+#     if all(!(t in T_i[p]) for p in P)
+#         fix(bd[t,c], 0.0; force=true)
+#     end
+
+#     if all(!(t in T_ir[p]) for p in P_r)
+#         fix(bd_r[t,c], 0.0; force=true)
+#     end
+# end
 
 #! have to comment but if it commented the process got killed
 # for t in T, c in B
@@ -288,20 +292,20 @@ function result_payload()
     arr_t2  = [Dict("p"=>i, "arr"=>arr_r[i]) for i in P_r]
 
     # initial positions from ba[0,*] / ba_r[0,*]
-    initpos = Vector{Dict{String,Any}}()
-    for c in B
-        b0  = value(ba[first(T), c])
-        b0r = value(ba_r[first(T), c])
-        if b0 > 0.5 && b0r < 0.5
-            push!(initpos, Dict("bus"=>c, "terminal"=>"CEI"))
-        elseif b0r > 0.5 && b0 < 0.5
-            push!(initpos, Dict("bus"=>c, "terminal"=>"T2"))
-        else
-            # หากโมเดลกำหนดไม่ชัด ให้ fallback จาก constraint เริ่มวัน
-            term = b0 >= b0r ? "CEI" : "T2"
-            push!(initpos, Dict("bus"=>c, "terminal"=>term))
-        end
-    end
+    # initpos = Vector{Dict{String,Any}}()
+    # for c in B
+    #     b0  = value(ba[first(T), c])
+    #     b0r = value(ba_r[first(T), c])
+    #     if b0 > 0.5 && b0r < 0.5
+    #         push!(initpos, Dict("bus"=>c, "terminal"=>"CEI"))
+    #     elseif b0r > 0.5 && b0 < 0.5
+    #         push!(initpos, Dict("bus"=>c, "terminal"=>"T2"))
+    #     else
+    #         # หากโมเดลกำหนดไม่ชัด ให้ fallback จาก constraint เริ่มวัน
+    #         term = b0 >= b0r ? "CEI" : "T2"
+    #         push!(initpos, Dict("bus"=>c, "terminal"=>term))
+    #     end
+    # end
 
     # departures (collect only bd==1 / bd_r==1)
     deps = Vector{Dict{String,Any}}()
@@ -334,7 +338,7 @@ function result_payload()
         "objective" => (isfinite(objective_value(model)) ? objective_value(model) : nothing),
         "sets" => sets,
         "arrivals" => Dict("CEI"=>arr_cei, "T2"=>arr_t2),
-        "initial_positions" => initpos,
+        # "initial_positions" => initpos,
         "departures" => deps,
         "assignments" => asg
     )
