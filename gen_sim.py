@@ -8,7 +8,7 @@ from matplotlib.patches import Rectangle, Circle
 
 PROJECT_PATH = "/home/hpcnc/bus_opt"
 data_path = "/output/"
-files = ["tc_25_12_60_6.json"]
+files = ["tc_1_0.5_20_4.json"]
 
 def create_bus_terminal_animation(data):
     """
@@ -25,7 +25,15 @@ def create_bus_terminal_animation(data):
     w_max = data["meta"]["w_max"]
     T_end = data["meta"]["T_end"]
     
-    initial_positions = {pos["bus"]: pos["terminal"] for pos in data["initial_positions"]}
+    # initial_positions = {pos["bus"]: pos["terminal"] for pos in data["initial_positions"]}
+    seen = set()
+    initial_positions = {}
+
+    for pos in sorted(data["departures"], key=lambda x: x["t"]):
+        if pos["bus"] not in seen:
+            initial_positions[pos["bus"]] = pos["terminal"]
+            seen.add(pos["bus"])
+
     assignments = data["assignments"]
     departures = data["departures"]
     arrivals_cei = {arr["p"]: arr["arr"] for arr in data["arrivals"]["CEI"]}
@@ -234,6 +242,29 @@ def create_bus_terminal_animation(data):
         """Update simulation state based on current time"""
         
         # Handle departures
+        # if current_time in departure_schedule:
+        #     for departure in departure_schedule[current_time]:
+        #         bus_id = departure['bus']
+        #         terminal = departure['terminal']
+                
+        #         if bus_states[bus_id]['status'] == 'at_terminal':
+        #             # Pick up assigned passengers
+        #             for full_id, p_state in passenger_states.items():
+        #                 if (p_state['assigned_bus'] == bus_id and 
+        #                     p_state['pickup_time'] == current_time and
+        #                     p_state['status'] == 'waiting' and
+        #                     p_state['origin'] == terminal):
+        #                     p_state['status'] = 'on_bus'
+        #                     bus_states[bus_id]['passengers'].append(full_id)
+        #                     if p_state['origin'] == 'T2':
+        #                         p_id = full_id - len(arrivals_cei)
+                    
+        #             # Start traveling
+        #             bus_states[bus_id]['status'] = 'traveling'
+        #             bus_states[bus_id]['target_terminal'] = 'T2' if terminal == 'CEI' else 'CEI'
+        #             bus_states[bus_id]['travel_progress'] = 0
+        #             bus_states[bus_id]['departure_time'] = current_time
+        #             bus_states[bus_id]['arrival_time'] = current_time + tau
         if current_time in departure_schedule:
             for departure in departure_schedule[current_time]:
                 bus_id = departure['bus']
@@ -248,15 +279,17 @@ def create_bus_terminal_animation(data):
                             p_state['origin'] == terminal):
                             p_state['status'] = 'on_bus'
                             bus_states[bus_id]['passengers'].append(full_id)
-                            if p_state['origin'] == 'T2':
-                                p_id = full_id - len(arrivals_cei)
-                    
-                    # Start traveling
-                    bus_states[bus_id]['status'] = 'traveling'
-                    bus_states[bus_id]['target_terminal'] = 'T2' if terminal == 'CEI' else 'CEI'
-                    bus_states[bus_id]['travel_progress'] = 0
-                    bus_states[bus_id]['departure_time'] = current_time
-                    bus_states[bus_id]['arrival_time'] = current_time + tau
+
+                    # Only depart if there are passengers onboard
+                    if len(bus_states[bus_id]['passengers']) > 0:
+                        bus_states[bus_id]['status'] = 'traveling'
+                        bus_states[bus_id]['target_terminal'] = 'T2' if terminal == 'CEI' else 'CEI'
+                        bus_states[bus_id]['travel_progress'] = 0
+                        bus_states[bus_id]['departure_time'] = current_time
+                        bus_states[bus_id]['arrival_time'] = current_time + tau
+                    else:
+                        # Stay at terminal (no passengers)
+                        bus_states[bus_id]['status'] = 'at_terminal'
         
         # Update traveling buses
         for bus_id, state in bus_states.items():
@@ -354,7 +387,7 @@ for filename in files:
         print(f"saved animation...")
         clip = mp.VideoFileClip(PROJECT_PATH + f"/animation/{filename}.gif")
         print("converting to MP4...")
-        clip.write_videofile(f"{filename}.mp4")
+        clip.write_videofile(PROJECT_PATH + f"/animation/{filename}.mp4")
         print("===== finished ====")
     except Exception as e:
         print(f"error creating aimation for {filename} : {e}")
