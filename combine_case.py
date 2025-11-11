@@ -5,25 +5,27 @@ from typing import List, Dict
 from itertools import product
 
 # lambda = 40.1 for 500 passengers
+# lambda = 59.4 for 750 passengers
 # lambda = 82 for 1000 passengers
 # lambda = 121.5 for 1500 passengers
 # lambda = 165.4 for 2000 passengers
 
+
+params = {
+    "lambda_per_hour_cei": [121.5],
+    "lambda_per_hour_t2": [82],
+    "w_max" : [80],
+    "buses" : [9, 10],
+    "seed": [42]
+}
+
 # params = {
-#     "lambda_per_hour_cei": [82, 121.5, 165.5],
-#     "lambda_per_hour_t2": [40.1, 82, 121.5],
+#     "lambda_per_hour_cei": [59.4, 40.1],
+#     "lambda_per_hour_t2": [40.1],
 #     "w_max" : [80],
 #     "buses" : [4, 5, 6, 7],
 #     "seed": [42]
 # }
-
-params = {
-    "lambda_per_hour_cei": [1],
-    "lambda_per_hour_t2": [0.5],
-    "w_max" : [20],
-    "buses" : [4],
-    "seed": [42]
-}
 
 def get_base_case(seed: int, lmbda: int):
     try:
@@ -43,7 +45,7 @@ def gen_case(params: dict):
     bus = params["buses"]
     seed = params["seed"]
 
-    mapp = {40.1: "500", 82: "1000", 121.5:"1500", 165.5: "2000"}
+    mapp = {40.1: "500", 59.4:"750", 82: "1000", 121.5:"1500", 165.5: "2000"}
 
     base_case_cei = get_base_case(seed=seed, lmbda=cei)
     base_case_t2 = get_base_case(seed=seed, lmbda=t2)

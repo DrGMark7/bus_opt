@@ -14,10 +14,10 @@ PROJECT_PATH = "/home/hpcnc/bus_opt"
 # }
 
 params = {
-    "passengers_cei": [1],
-    "passengers_t2": [0.5],
-    "buses": [4],
-    "w_max" : [20]
+    "passengers_cei": [75],
+    "passengers_t2": [50],
+    "buses": [7],
+    "w_max" : [80]
 }
 
 def generate_permutation(params: dict) -> List[Dict[str, int]]:

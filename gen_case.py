@@ -6,9 +6,9 @@ from itertools import product
 # lambda = 41.67 for 500 passenger
 # lambda = 83.33 for 500 passenger
 params = {
-    "lambda_per_hour_cei": [41.67, 100, 125],
-    "lambda_per_hour_t2": [50, 75, 100],
-    "buses": [6, 7],
+    "lambda_per_hour_cei": [2],
+    "lambda_per_hour_t2": [1],
+    "buses": [7],
     "w_max" : [80]
 }
 
