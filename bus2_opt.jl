@@ -2,6 +2,7 @@ using Random
 using JuMP
 using JSON
 using CPLEX
+using Dates
 
 Random.seed!(42)
 
@@ -273,7 +274,6 @@ else
     println("Model not optimal. Consider loosening w_max or expanding T.")
 end
 
-
 function result_payload()
     # meta
     meta = Dict(
@@ -335,6 +335,7 @@ function result_payload()
     return Dict(
         "schema_version" => 1,
         "meta" => meta,
+        "generated_at" => string(Dates.now()+Dates.Hour(7)),
         "status" => string(termination_status(model)),
         "objective" => (isfinite(objective_value(model)) ? objective_value(model) : nothing),
         "sets" => sets,
@@ -356,8 +357,11 @@ if termination_status(model) in (MOI.OPTIMAL, MOI.FEASIBLE_POINT, MOI.TIME_LIMIT
 else
     # if infeasible unless raise meta+status for checking
     payload = Dict(
-        "schema_version"=>1, "meta"=>Dict("T_start"=>first(T),"T_end"=>last(T),"L"=>L,"tau"=>tau,"capacity"=>c_max,"w_max"=>w_max),
-        "status"=>string(termination_status(model)), "objective"=>nothing,
+        "schema_version"=>1,
+        "meta"=>Dict("T_start"=>first(T),"T_end"=>last(T),"L"=>L,"tau"=>tau,"capacity"=>c_max,"w_max"=>w_max),
+        "generated_at" => string(Dates.now()+Dates.Hour(7)),
+        "status"=>string(termination_status(model)),
+        "objective"=>nothing,
         "sets"=>Dict("buses"=>collect(B),"P_CEI"=>collect(P),"P_T2"=>collect(P_r)),
         "arrivals"=>Dict("CEI"=>[], "T2"=>[]),
         "initial_positions"=>[], "departures"=>[], "assignments"=>[]
