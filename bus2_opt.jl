@@ -119,7 +119,8 @@ set_optimizer_attribute(model, "CPX_PARAM_HEURFREQ", 10)
 # set_optimizer_attribute(model, "CPXPARAM_MIP_Strategy_File", 3)
 # set_optimizer_attribute(model, "CPX_PARAM_NODEFILEIND", 3)
 set_string_names_on_creation(model, false)
-set_optimizer_attribute(model, "CPXPARAM_MIP_Tolerances_MIPGap", 0.04)
+set_optimizer_attribute(model, "CPXPARAM_MIP_Tolerances_MIPGap", 0.04) # gap 4 %
+set_optimizer_attribute(model, "CPX_PARAM_TILIM", 259200.0) # 3 days
 
 # Decision variables
 
@@ -344,7 +345,7 @@ function result_payload()
     )
 end
 
-if termination_status(model) in (MOI.OPTIMAL, MOI.FEASIBLE_POINT)
+if termination_status(model) in (MOI.OPTIMAL, MOI.FEASIBLE_POINT, MOI.TIME_LIMIT) && primal_status(model) == MOI.FEASIBLE_POINT
     payload = result_payload()
     # Dump as File
     open(out_result, "w") do io
